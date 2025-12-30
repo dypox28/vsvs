@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تحدي القمة - Game Over</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6c5ce7;
+            --secondary: #00cec9;
+            --bg: #0f172a;
+            --text: #f8fafc;
+        }
+        * { font-family: 'Tajawal', sans-serif; box-sizing: border-box; }
+        body { 
+            background: var(--bg); color: var(--text);
+            display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0;
+            overflow: hidden;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(15px);
+            padding: 25px; border-radius: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            width: 95%; max-width: 550px; border: 1px solid rgba(255,255,255,0.1);
+            position: relative; transition: all 0.3s ease;
+        }
+        h1 { font-size: 1.5rem; text-align: center; color: #fff; margin-bottom: 25px; letter-spacing: 1px; }
+        
+        .setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+        .player-box { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 16px; text-align: center; }
+        .player-box.me { border-bottom: 4px solid var(--primary); }
+        .player-box.friend { border-bottom: 4px solid var(--secondary); }
+        
+        label { display: block; font-size: 12px; margin-bottom: 8px; color: #94a3b8; }
+        input {
+            width: 100%; background: #1e293b; border: 1px solid #334155; color: white;
+            padding: 10px; border-radius: 10px; text-align: center; font-size: 14px; outline: none;
+        }
+        input:focus { border-color: var(--primary); }
+
+        /* منطقة الحبل */
+        .arena {
+            position: relative; height: 80px; margin: 30px 0;
+            background: rgba(255,255,255,0.02); border-radius: 40px; 
+            display: flex; align-items: center; border: 1px solid rgba(255,255,255,0.05);
+        }
+        .rope { width: 90%; height: 4px; background: rgba(255,255,255,0.1); margin: 0 auto; position: relative; }
+        #puck {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 45px; height: 45px; background: white; border-radius: 50%;
+            box-shadow: 0 0 15px rgba(255,255,255,0.3);
+            display: flex; align-items: center; justify-content: center;
+            transition: left 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 20px; z-index: 10;
+        }
+
+        .percent-display { display: flex; justify-content: space-between; padding: 0 10px; font-weight: bold; font-size: 14px; }
+        
+        /* شاشة Game Over */
+        #game-over-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.95); border-radius: 24px;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 100; text-align: center; border: 2px solid var(--primary);
+        }
+        .restart-btn {
+            margin-top: 20px; padding: 10px 25px; background: var(--primary);
+            border: none; color: white; border-radius: 8px; cursor: pointer; font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div id="game-over-overlay">
+        <h2 style="font-size: 40px; margin: 0;">GAME OVER</h2>
+        <p id="winner-text" style="font-size: 18px; color: #fbbf24;"></p>
+        <button class="restart-btn" onclick="location.reload()">إعادة التحدي</button>
+    </div>
+
+    <h1>⚔️ تحدي القراية ⚔️</h1>
+    
+    <div class="setup-grid">
+        <div class="player-box me">
+            <h3 style="margin-top:0; font-size:16px;">أنت</h3>
+            <label>الكلي</label>
+            <input type="number" id="myTotal" value="11" oninput="update()">
+            <label style="margin-top:10px;">المنجز</label>
+            <input type="number" id="myDone" value="0" oninput="update()">
+        </div>
+
+        <div class="player-box friend">
+            <h3 style="margin-top:0; font-size:16px;">صديقك</h3>
+            <label>الكلي</label>
+            <input type="number" id="friendTotal" value="7" oninput="update()">
+            <label style="margin-top:10px;">المنجز</label>
+            <input type="number" id="friendDone" value="0" oninput="update()">
+        </div>
+    </div>
+
+    <div class="arena">
+        <div class="rope">
+            <div id="puck">🤺</div>
+        </div>
+    </div>
+
+    <div class="percent-display">
+        <span id="myPercent" style="color:var(--primary)">0%</span>
+        <span style="color: #64748b; font-weight: normal;">التقدم</span>
+        <span id="friendPercent" style="color:var(--secondary)">0%</span>
+    </div>
+</div>
+
+<script>
+    function update() {
+        const myT = parseFloat(document.getElementById('myTotal').value) || 1;
+        const myD = parseFloat(document.getElementById('myDone').value) || 0;
+        const frT = parseFloat(document.getElementById('friendTotal').value) || 1;
+        const frD = parseFloat(document.getElementById('friendDone').value) || 0;
+
+        const myP = Math.round((myD / myT) * 100);
+        const frP = Math.round((frD / frT) * 100);
+
+        document.getElementById('myPercent').innerText = myP + "%";
+        document.getElementById('friendPercent').innerText = frP + "%";
+
+        // تحريك الأيقونة
+        const diff = frP - myP; 
+        let move = 50 + (diff / 2.5); 
+        if (move < 5) move = 5;
+        if (move > 95) move = 95;
+        
+        const puck = document.getElementById('puck');
+        puck.style.left = move + "%";
+
+        // تغيير الأيقونة حسب التقدم
+        if (myP > frP) puck.innerText = "⚡";
+        else if (frP > myP) puck.innerText = "🔥";
+        else puck.innerText = "⚖️";
+
+        // نظام Game Over
+        if (myP >= 100 || frP >= 100) {
+            const overlay = document.getElementById('game-over-overlay');
+            const winnerText = document.getElementById('winner-text');
+            overlay.style.display = 'flex';
+            
+            if (myP >= 100 && frP >= 100) {
+                winnerText.innerText = "تعادل أسطوري! كملتوا في زوج!";
+            } else if (myP >= 100) {
+                winnerText.innerText = "🏆 أنت هو البطل! غلبته بالسرعة!";
+            } else {
+                winnerText.innerText = "💀 صديقك فاز بالتحدي هذه المرة!";
+            }
+        }
+    }
+    update();
+</script>
+
+</body>
+</html>
